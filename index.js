@@ -1,5 +1,30 @@
 const http = require('http');
 
+const MACRO_SYSTEM = 'Sei un nutrizionista. Stima i macronutrienti del pasto descritto. Rispondi SOLO con JSON valido, nessun testo extra, nessun markdown. Struttura: {"name":"nome breve","kcal":numero,"protein":numero,"carbs":numero,"fat":numero,"satfat":numero,"fiber":numero,"ultra":boolean}. Arrotonda a interi tranne satfat e fiber (1 decimale). "ultra" è true per cibi ultra-processati.';
+
+const SUGGEST_SYSTEM = 'Sei un nutrizionista esperto. Ti vengono dati i macro rimanenti da raggiungere oggi. Suggerisci 3 opzioni di pasto o spuntino concrete e realistiche che aiutino a raggiungere quei valori. Rispondi SOLO con JSON valido, nessun testo extra, nessun markdown. Struttura: {"suggestions":[{"name":"nome pasto","description":"descrizione breve e concreta","kcal":numero,"protein":numero,"carbs":numero,"fat":numero}]}';
+
+async function callClaude(system, userMessage, apiKey) {
+  const { default: fetch } = await import('node-fetch');
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 800,
+      system,
+      messages: [{ role: 'user', content: userMessage }]
+    })
+  });
+  const data = await response.json();
+  const text = data.content?.find(b => b.type === 'text')?.text || '{}';
+  return JSON.parse(text.replace(/```json|```/g, '').trim());
+}
+
 const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -12,27 +37,25 @@ const server = http.createServer(async (req, res) => {
   req.on('data', chunk => body += chunk);
   req.on('end', async () => {
     try {
-      const { food } = JSON.parse(body);
-      const { default: fetch } = await import('node-fetch');
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 500,
-          system: 'Sei un nutrizionista. Stima i macronutrienti del pasto descritto. Rispondi SOLO con JSON valido, nessun testo extra, nessun markdown. Struttura: {"name":"nome breve","kcal":numero,"protein":numero,"carbs":numero,"fat":numero,"satfat":numero,"fiber":numero,"ultra":boolean}. Arrotonda a interi tranne satfat e fiber (1 decimale).',
-          messages: [{ role: 'user', content: food }]
-        })
-      });
-      const data = await response.json();
-      const text = data.content?.find(b => b.type === 'text')?.text || '{}';
-      const macro = JSON.parse(text.replace(/```json|```/g, '').trim());
+      const payload = JSON.parse(body);
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      let result;
+
+      if (payload.type === 'suggest') {
+        const { remaining } = payload;
+        const msg = `Macro rimanenti da raggiungere oggi:
+- Calorie: ${remaining.kcal} kcal
+- Proteine: ${remaining.protein}g
+- Carboidrati: ${remaining.carbs}g
+- Grassi: ${remaining.fat}g
+Suggerisci 3 pasti o spuntini concreti e semplici da preparare.`;
+        result = await callClaude(SUGGEST_SYSTEM, msg, apiKey);
+      } else {
+        result = await callClaude(MACRO_SYSTEM, payload.food, apiKey);
+      }
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(macro));
+      res.end(JSON.stringify(result));
     } catch (err) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: err.message }));
