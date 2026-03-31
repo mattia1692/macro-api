@@ -35,6 +35,7 @@ setInterval(() => {
 const ALLOWED_ORIGINS = [
   'https://macro-pwa.pages.dev',
   'https://wilowilo.pages.dev',
+  'https://wilowilo-pwa.pages.dev',
   'http://localhost:5173',
   'http://localhost:4173',
 ];
