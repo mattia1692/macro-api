@@ -1,4 +1,4 @@
-app = "wilo-nutrition-api"
+app = "wilowilo-api"
 primary_region = "fra"
 
 [build]

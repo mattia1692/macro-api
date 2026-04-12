@@ -1,17 +1,31 @@
 const http = require('http');
-const admin = require('firebase-admin');
 let _fetch;
 async function getFetch() {
   if (!_fetch) { const m = await import('node-fetch'); _fetch = m.default; }
   return _fetch;
 }
 
-// ── Firebase Admin (verifica ID token) ───────────────────────────────────────
-admin.initializeApp({
-  credential: admin.credential.applicationDefault(),
-  // Se non hai GOOGLE_APPLICATION_CREDENTIALS, usa project ID + Database Auth Override
-  projectId: 'macro-tracker-d62a1',
-});
+// ── Firebase token verification via REST API ──────────────────────────────────
+async function verifyFirebaseToken(idToken) {
+  const apiKey = process.env.FIREBASE_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const fetch = await getFetch();
+    const resp = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      },
+    );
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return data.users?.[0]?.localId ?? null;
+  } catch {
+    return null;
+  }
+}
 
 // ── Rate limiting in-memory (per uid, max 30 req/ora) ────────────────────────
 const RATE_LIMIT = 30;
@@ -183,11 +197,8 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  let uid;
-  try {
-    const decoded = await admin.auth().verifyIdToken(idToken);
-    uid = decoded.uid;
-  } catch {
+  const uid = await verifyFirebaseToken(idToken);
+  if (!uid) {
     res.writeHead(401, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Token non valido o scaduto' }));
     return;
