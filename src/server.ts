@@ -1,0 +1,15 @@
+import { buildApp } from './app';
+
+const PORT = Number(process.env.PORT) || 3001;
+const HOST = '0.0.0.0';
+
+async function start() {
+  const app = await buildApp();
+  await app.listen({ port: PORT, host: HOST });
+  console.log(`wilowilo API running on http://${HOST}:${PORT}`);
+}
+
+start().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

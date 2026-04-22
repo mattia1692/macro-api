@@ -1,0 +1,86 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id          String             @id            // Firebase UID
+  email       String             @unique
+  createdAt   DateTime           @default(now())
+  diaryDays   DiaryDay[]
+  settings    UserSettings?
+  weights     WeightEntry[]
+  checkpoints WeightCheckpoint[]
+  customFoods CustomFood[]
+}
+
+model DiaryDay {
+  id     Int    @id @default(autoincrement())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date   String                              // YYYY-MM-DD
+  items  Json   @default("{}")              // Record<mealName, FoodItem[]>
+  hunger Int?
+  mood   Int?
+  water  Int?
+
+  @@unique([userId, date])
+  @@index([userId])
+}
+
+model UserSettings {
+  userId          String  @id
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kcal            Float   @default(0)
+  protein         Float   @default(0)
+  carbs           Float   @default(0)
+  fat             Float   @default(0)
+  satfat          Float   @default(0)
+  fiber           Float   @default(0)
+  waterTarget     Int     @default(8)
+  meals           Json    @default("[]")    // string[]
+  sheetsUrl       String  @default("")
+  lang            String  @default("it")
+  weightHidden    Boolean @default(false)
+  wizardCompleted Boolean @default(false)
+  startWeight     Float?
+  goalWeight      Float?
+}
+
+model WeightEntry {
+  id     Int    @id @default(autoincrement())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date   String                              // YYYY-MM-DD
+  weight Float
+
+  @@unique([userId, date])
+  @@index([userId])
+}
+
+model WeightCheckpoint {
+  id           String  @id                  // timestamp-based, generato dal client
+  userId       String
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date         String                        // YYYY-MM-DD
+  targetWeight Float
+  label        String?
+
+  @@index([userId])
+}
+
+model CustomFood {
+  id        String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  brand     String?
+  per100g   Json                             // { kcal, protein, carbs, fat, satfat, fiber }
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
