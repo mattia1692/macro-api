@@ -55,10 +55,13 @@ export function getRefreshCookieName(): string {
 }
 
 export function getRefreshCookieOptions() {
+  const isProd = process.env.NODE_ENV === 'production';
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
+    secure: isProd,
+    // SameSite=None required for cross-origin requests (PWA on Cloudflare Pages,
+    // API on Railway are different origins). Requires Secure=true in production.
+    sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax',
     path: '/',
     maxAge: 30 * 24 * 60 * 60, // 30d in seconds
   };
