@@ -34,15 +34,25 @@ export async function diaryRoutes(fastify: FastifyInstance) {
   });
 
   // DELETE /diary/items/:date/:meal/by-id/:itemId — rimuove per _id stabile
+  // Accepts optional ?fallbackIdx=N: if the item is not found by _id (e.g. stored
+  // before _id was persisted), falls back to index-based removal.
   fastify.delete('/items/:date/:meal/by-id/:itemId', async (request, reply) => {
     const userId = request.user.sub;
     const parsed = itemByIdParamsSchema.safeParse(request.params);
     if (!parsed.success) throw new ValidationError('Parametri non validi');
 
-    await removeItemById(
+    const result = await removeItemById(
       fastify.prisma, userId,
       parsed.data.date, parsed.data.meal, parsed.data.itemId,
     );
+
+    if (result === null) {
+      const fallbackIdx = parseInt((request.query as Record<string, string>)['fallbackIdx'] ?? '', 10);
+      if (!isNaN(fallbackIdx)) {
+        await removeFoodItem(fastify.prisma, userId, parsed.data.date, parsed.data.meal, fallbackIdx);
+      }
+    }
+
     return reply.status(204).send();
   });
 
