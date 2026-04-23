@@ -57,7 +57,7 @@ src/
     cors.ts            — CORS allowlist
   modules/
     auth/              — POST /auth/login|refresh|logout (Firebase → JWT exchange)
-    diary/             — POST /diary/items, DELETE /diary/items/:date/:meal/:idx, PATCH /diary/days/:date
+    diary/             — POST /diary/items, DELETE /diary/items/:date/:meal/:idx|by-id/:id, PUT /diary/days/:date/items, PATCH /diary/days/:date
     weight/            — PUT|DELETE /weight/:date, PUT|PATCH|DELETE /weight/checkpoints/:id
     settings/          — PATCH /settings
     foods/             — GET /food/search|search/extended|barcode/:barcode, POST /ai/*
