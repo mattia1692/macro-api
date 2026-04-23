@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const foodItemSchema = z.object({
+  _id: z.string().optional(),
   name: z.string(),
   kcal: z.number(),
   protein: z.number(),
