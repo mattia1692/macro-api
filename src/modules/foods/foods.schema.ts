@@ -42,4 +42,9 @@ export const aiPlanSchema = z.object({
   notes: z.string().optional(),
 });
 
+export const aiPhotoSchema = z.object({
+  image: z.string().min(1),
+  mediaType: z.enum(['image/jpeg', 'image/png', 'image/webp']).default('image/jpeg'),
+});
+
 export type CustomFoodBody = z.infer<typeof customFoodBodySchema>;

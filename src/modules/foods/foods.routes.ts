@@ -1,10 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import { requireAuth } from '../../shared/middleware/auth';
-import { customFoodBodySchema, idParamSchema, aiAnalyzeSchema, aiSuggestSchema, aiPlanSchema } from './foods.schema';
+import { customFoodBodySchema, idParamSchema, aiAnalyzeSchema, aiSuggestSchema, aiPlanSchema, aiPhotoSchema } from './foods.schema';
 import {
   getCustomFoods, upsertCustomFood, deleteCustomFood,
   searchFoods, searchFoodsExtended, lookupBarcode,
-  aiAnalyze, aiSuggest, aiPlan, checkAiRate,
+  aiAnalyze, aiSuggest, aiPlan, aiAnalyzePhoto, checkAiRate,
 } from './foods.service';
 import { ValidationError, RateLimitError } from '../../shared/errors';
 
@@ -98,6 +98,17 @@ export async function foodsRoutes(fastify: FastifyInstance) {
       if (!parsed.success) throw new ValidationError('Parametri non validi');
 
       return reply.send(await aiPlan(parsed.data));
+    });
+
+    // POST /ai/analyze-photo — stima macro da foto
+    authed.post('/ai/analyze-photo', { config: { rawBody: false }, bodyLimit: 4 * 1024 * 1024 }, async (request, reply) => {
+      const userId = request.user.sub;
+      if (!checkAiRate(userId)) throw new RateLimitError();
+
+      const parsed = aiPhotoSchema.safeParse(request.body);
+      if (!parsed.success) throw new ValidationError('Immagine mancante o non valida');
+
+      return reply.send(await aiAnalyzePhoto(parsed.data.image, parsed.data.mediaType));
     });
   });
 }
