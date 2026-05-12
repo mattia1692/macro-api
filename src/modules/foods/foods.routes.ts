@@ -57,11 +57,6 @@ export async function foodsRoutes(fastify: FastifyInstance) {
 
     // DELETE /foods/mine/:id — elimina cibo personale
     authed.delete('/mine/:id', async (request, reply) => {
-      if (!request.user) {
-        try { await request.jwtVerify(); } catch {
-          return reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Autenticazione richiesta' });
-        }
-      }
       const userId = request.user.sub;
       const parsed = idParamSchema.safeParse(request.params);
       if (!parsed.success) throw new ValidationError('ID non valido');

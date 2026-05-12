@@ -28,27 +28,12 @@ export async function weightRoutes(fastify: FastifyInstance) {
 
   // DELETE /weight/:date — elimina pesata
   fastify.delete('/:date', async (request, reply) => {
-    try {
-      // Fastify v5 bug: preHandler hooks added via addHook may not set request.user
-      // for DELETE routes in scoped plugins. Call jwtVerify() explicitly as fallback.
-      if (!request.user) {
-        try {
-          await request.jwtVerify();
-        } catch (authErr) {
-          return reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Autenticazione richiesta' });
-        }
-      }
-      const userId = request.user.sub;
-      const parsed = dateParamSchema.safeParse(request.params);
-      if (!parsed.success) throw new ValidationError('Data non valida');
+    const userId = request.user.sub;
+    const parsed = dateParamSchema.safeParse(request.params);
+    if (!parsed.success) throw new ValidationError('Data non valida');
 
-      await deleteWeight(fastify.prisma, userId, parsed.data.date);
-      return reply.status(204).send();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      const stack = err instanceof Error ? err.stack?.split('\n')[1]?.trim() : '';
-      return reply.status(500).send({ code: 'DELETE_WEIGHT_ERROR', message: msg, detail: stack });
-    }
+    await deleteWeight(fastify.prisma, userId, parsed.data.date);
+    return reply.status(204).send();
   });
 
   // PUT /weight/checkpoints/:id — upsert checkpoint
@@ -79,13 +64,6 @@ export async function weightRoutes(fastify: FastifyInstance) {
 
   // DELETE /weight/checkpoints/:id — elimina checkpoint
   fastify.delete('/checkpoints/:id', async (request, reply) => {
-    if (!request.user) {
-      try {
-        await request.jwtVerify();
-      } catch {
-        return reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Autenticazione richiesta' });
-      }
-    }
     const userId = request.user.sub;
     const parsed = idParamSchema.safeParse(request.params);
     if (!parsed.success) throw new ValidationError('ID non valido');

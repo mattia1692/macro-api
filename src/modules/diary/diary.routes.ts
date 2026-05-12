@@ -22,11 +22,6 @@ export async function diaryRoutes(fastify: FastifyInstance) {
 
   // DELETE /diary/items/:date/:meal/:idx — rimuove un alimento per indice
   fastify.delete('/items/:date/:meal/:idx', async (request, reply) => {
-    if (!request.user) {
-      try { await request.jwtVerify(); } catch {
-        return reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Autenticazione richiesta' });
-      }
-    }
     const userId = request.user.sub;
     const parsed = itemParamsSchema.safeParse(request.params);
     if (!parsed.success) throw new ValidationError('Parametri non validi');
@@ -42,11 +37,6 @@ export async function diaryRoutes(fastify: FastifyInstance) {
   // Accepts optional ?fallbackIdx=N: if the item is not found by _id (e.g. stored
   // before _id was persisted), falls back to index-based removal.
   fastify.delete('/items/:date/:meal/by-id/:itemId', async (request, reply) => {
-    if (!request.user) {
-      try { await request.jwtVerify(); } catch {
-        return reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Autenticazione richiesta' });
-      }
-    }
     const userId = request.user.sub;
     const parsed = itemByIdParamsSchema.safeParse(request.params);
     if (!parsed.success) throw new ValidationError('Parametri non validi');
