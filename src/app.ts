@@ -31,7 +31,7 @@ export async function buildApp(): Promise<FastifyInstance> {
       return reply.status(error.statusCode).send({ code: error.code, message: error.message });
     }
     fastify.log.error(error);
-    return reply.status(500).send({ code: 'INTERNAL_ERROR', message: 'Errore interno del server' });
+    return reply.status(500).send({ code: 'INTERNAL_ERROR', message: 'Errore interno del server', _debug: { name: (error as Error).name, msg: (error as Error).message, stack: (error as Error).stack?.split('\n').slice(0, 4) } });
   });
 
   // Health check
